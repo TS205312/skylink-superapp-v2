@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyLink Delivery v2.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zipred: "#E21D24",
+            slatenavy: "#0F172A",
+            steel: "#334155",
+            cloud: "#F8FAFC"
+          },
+          fontFamily: {
+            ui: ["Inter", "sans-serif"],
+            tactical: ["Space Mono", "monospace"]
+          },
+          boxShadow: {
+            tactical: "0 18px 60px rgba(7, 12, 23, 0.3)"
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --zipred: #E21D24;
+      --slatenavy: #0F172A;
+      --panel: rgba(15, 23, 42, 0.9);
+      --line: rgba(255, 255, 255, 0.16);
+      --ice: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      min-height: 100vh;
+      color: #fff;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(226, 29, 36, 0.28), transparent 40%),
+        radial-gradient(circle at 85% 15%, rgba(56, 189, 248, 0.2), transparent 42%),
+        linear-gradient(135deg, #020617 0%, #0F172A 45%, #1E293B 100%);
+    }
+
+    .hud-font {
+      font-family: "Space Mono", monospace;
+    }
+
+    .glass {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.84), rgba(15, 23, 42, 0.62));
+      border: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .grid-shell {
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.09) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.09) 1px, transparent 1px);
+      background-size: 26px 26px;
+      mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+    }
+
+    .map-frame {
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+
+    .leaflet-container {
+      width: 100%;
+      height: 100%;
+      background: #0B1120;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: #0F172A;
+      color: #fff;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .drone-pin {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow:
+        0 0 0 4px rgba(226, 29, 36, 0.28),
+        0 0 20px rgba(226, 29, 36, 0.8);
+      background:
+        radial-gradient(circle at 35% 35%, #fff, #fda4af 42%, #E21D24 72%);
+      animation: dronePulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes dronePulse {
+      0%, 100% { transform: scale(0.95); }
+      50% { transform: scale(1.08); }
+    }
+
+    .support-float {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9999;
+      display: grid;
+      gap: 8px;
+      width: min(310px, calc(100vw - 20px));
+    }
+
+    .support-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.86));
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 12px;
+      text-decoration: none;
+      transition: transform 0.2s ease;
+    }
+
+    .support-btn:hover { transform: translateY(-1px); }
+
+    .support-chat {
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.92));
+      overflow: hidden;
+    }
+
+    .support-chat-header {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .support-chat-messages {
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .support-msg {
+      font-size: 12px;
+      border-radius: 10px;
+      padding: 8px 10px;
+      line-height: 1.4;
+    }
+
+    .support-msg.user {
+      justify-self: end;
+      background: rgba(14, 116, 144, 0.35);
+    }
+
+    .support-msg.bot {
+      justify-self: start;
+      background: rgba(226, 29, 36, 0.22);
+    }
+
+    .support-chat-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .fleet-radar {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fleet-radar::before,
+    .fleet-radar::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      border: 1px solid rgba(125, 211, 252, 0.35);
+      inset: 12%;
+      animation: fleetPulse 2.4s linear infinite;
+    }
+
+    .fleet-radar::after {
+      inset: 24%;
+      animation-delay: 1.2s;
+    }
+
+    @keyframes fleetPulse {
+      0% { transform: scale(0.86); opacity: 0.9; }
+      100% { transform: scale(1.2); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script>window.react = window.React;</script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/framer-motion@11/dist/framer-motion.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://unpkg.com/lucide-react@0.468.0/dist/umd/lucide-react.min.js"></script>
+
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
+    const { motion, AnimatePresence } = window.Motion || {};
+    const Icons = window.LucideReact || {};
+
+    const STORAGE_KEYS = {
+      operators: "skylink_v2_operators",
+      session: "skylink_v2_session",
+      inventory: "skylink_v2_inventory",
+      bookings: "skylink_v2_bookings"
+    };
+
+    const RATE_PER_KM = 5000;
+    const BOOKING_STATUSES = ["QUEUED", "IN_FLIGHT", "DELIVERED", "CANCELLED"];
+    // Use original zip folder layout so GLB can resolve relative textures correctly.
+    const DRONE_GLB_URL = "./assets/drone_zip/source/Flying%20drone_.glb";
+    const MAP_PROVIDERS = {
+      osm: {
+        label: "OpenStreetMap",
+        url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        options: { attribution: "&copy; OpenStreetMap contributors" }
+      },
+      carto: {
+        label: "Carto Voyager",
+        url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        options: { attribution: "&copy; OpenStreetMap contributors &copy; CARTO", subdomains: "abcd", maxZoom: 20 }
+      },
+      esri: {
+        label: "Esri World Imagery",
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        options: { attribution: "Tiles &copy; Esri" }
+      }
+    };
+
+    const WAREHOUSES = [
+      { id: "HCMC-H1", name: "HCMC Hub 1", area: "Thu Duc High-Tech Park", lat: 10.8443, lng: 106.7766 },
+      { id: "HCMC-H2", name: "HCMC Hub 2", area: "Tan Binh IP", lat: 10.8145, lng: 106.6212 },
+      { id: "HANOI-H1", name: "Hanoi Hub 1", area: "Hoa Lac High-Tech Park", lat: 21.0116, lng: 105.5255 }
+    ];
+
+    const PRODUCTS = [
+      { code: "MD-01", name: "Blood Bag", weightKg: 0.5 },
+      { code: "MD-02", name: "Vaccine", weightKg: 1.2 },
+      { code: "EC-03", name: "Urgent Docs", weightKg: 0.3 }
+    ];
+
+    const DEFAULT_INVENTORY = {
+      "HCMC-H1": { "MD-01": 180, "MD-02": 120, "EC-03": 220 },
+      "HCMC-H2": { "MD-01": 160, "MD-02": 95, "EC-03": 280 },
+      "HANOI-H1": { "MD-01": 210, "MD-02": 160, "EC-03": 300 }
+    };
+
+    function safeLoad(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        return JSON.parse(raw);
+      } catch (error) {
+        console.warn("Storage parse error:", key, error);
+        return fallback;
+      }
+    }
+
+    function safeSave(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.warn("Storage write error:", key, error);
+      }
+    }
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      const toRad = (deg) => (deg * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return 6371 * c;
+    }
+
+    function findNearestWarehouse(destination) {
+      if (!destination) return null;
+      return WAREHOUSES
+        .map((wh) => ({
+          warehouse: wh,
+          distanceKm: haversineKm(wh.lat, wh.lng, destination.lat, destination.lng)
+        }))
+        .sort((a, b) => a.distanceKm - b.distanceKm)[0];
+    }
+
+    function formatMoneyVnd(value) {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        maximumFractionDigits: 0
+      }).format(value || 0);
+    }
+
+    function parseLatLngText(input) {
+      const match = (input || "").match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+      if (!match) return null;
+      return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+    }
+
+    async function geocodeAddress(input) {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=vn&limit=1&q=${encodeURIComponent(input)}`;
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" }
+      });
+      if (!response.ok) throw new Error("Address lookup failed");
+      const result = await response.json();
+      if (!Array.isArray(result) || !result.length) return null;
+      return {
+        lat: parseFloat(result[0].lat),
+        lng: parseFloat(result[0].lon),
+        label: result[0].display_name
+      };
+    }
+
+    function buildArcPath(start, end, segments = 96) {
+      const dLat = end.lat - start.lat;
+      const dLng = end.lng - start.lng;
+      const span = Math.max(0.00001, Math.sqrt(dLat * dLat + dLng * dLng));
+      const perpLat = -dLng / span;
+      const perpLng = dLat / span;
+      const arcHeight = Math.min(0.42, span * 0.3);
+      const points = [];
+
+      for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const curve = Math.sin(Math.PI * t) * arcHeight;
+        const lat = start.lat + dLat * t + perpLat * curve;
+        const lng = start.lng + dLng * t + perpLng * curve;
+        points.push([lat, lng]);
+      }
+      return points;
+    }
+
+    function Icon({ name, size = 18, className = "", ...props }) {
+      const Component = Icons[name] || Icons.Circle;
+      return <Component size={size} className={className} {...props} />;
+    }
+
+    function StatTile({ icon, label, value, accent }) {
+      return (
+        <div className="glass rounded-xl p-3">
+          <div className="text-slate-300 text-xs uppercase tracking-widest hud-font flex items-center gap-2">
+            <Icon name={icon} size={14} style={{ color: accent }} />
+            {label}
+          </div>
+          <div className="mt-2 text-xl md:text-2xl font-semibold hud-font">{value}</div>
+        </div>
+      );
+    }
+
+    function FloatingSupport() {
+      const [open, setOpen] = useState(false);
+      const [text, setText] = useState("");
+      const [messages, setMessages] = useState([
+        { id: 1, role: "bot", text: "Xin chao. Can ho tro dat mission, status, hoac lien he nhanh?" }
+      ]);
+
+      const replyFor = (input) => {
+        const q = input.toLowerCase();
+        if (q.includes("zalo")) return "Zalo: 0966418133. Bam nut Zalo de mo chat nhanh.";
+        if (q.includes("gmail") || q.includes("mail")) return "Email: buianthinh13579@gmail.com";
+        if (q.includes("status")) return "Status goi y: QUEUED -> IN_FLIGHT -> DELIVERED. Co the set CANCELLED.";
+        if (q.includes("gia") || q.includes("phi")) return "Gia hien tai: 5,000 VND/km theo Haversine.";
+        return "Mình luôn ở đây. Bạn có thể hỏi về địa chỉ, status, hoặc phí vận chuyển.";
+      };
+
+      const send = (event) => {
+        event.preventDefault();
+        const value = text.trim();
+        if (!value) return;
+        const id = Date.now();
+        setMessages((prev) => [...prev, { id, role: "user", text: value }]);
+        setText("");
+        setTimeout(() => {
+          setMessages((prev) => [...prev, { id: id + 1, role: "bot", text: replyFor(value) }]);
+        }, 220);
+      };
+
+      return (
+        <div className="support-float">
+          <motion.a whileHover={{ y: -2 }} href="https://zalo.me/0966418133" target="_blank" rel="noreferrer" className="support-btn">
+            <Icon name="MessageCircle" size={16} />
+            Zalo: 0966418133
+          </motion.a>
+          <motion.a whileHover={{ y: -2 }} href="mailto:buianthinh13579@gmail.com" className="support-btn">
+            <Icon name="Mail" size={16} />
+            Gmail: buianthinh13579@gmail.com
+          </motion.a>
+          <motion.button
+            whileHover={{ y: -2 }}
+            animate={{ boxShadow: ["0 0 0 0 rgba(226,29,36,0.45)", "0 0 0 8px rgba(226,29,36,0.02)", "0 0 0 0 rgba(226,29,36,0.45)"] }}
+            transition={{ repeat: Infinity, duration: 1.8 }}
+            className="support-btn"
+            onClick={() => setOpen((v) => !v)}
+          >
+            <Icon name="Bot" size={16} />
+            {open ? "Dong Chat Bot" : "Mo Chat Bot"}
+          </motion.button>
+
+          {open && (
+            <div className="support-chat">
+              <div className="support-chat-header">
+                <strong className="hud-font text-xs">Support Bot</strong>
+                <button onClick={() => setOpen(false)} className="text-xs px-2 py-1 rounded bg-slate-800 border border-slate-600">X</button>
+              </div>
+              <div className="support-chat-messages">
+                {messages.map((m) => (
+                  <div key={m.id} className={`support-msg ${m.role}`}>{m.text}</div>
+                ))}
+              </div>
+              <form className="support-chat-form" onSubmit={send}>
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none"
+                  placeholder="Nhap noi dung..."
+                />
+                <button type="submit" className="px-3 py-2 rounded-lg bg-red-600 font-semibold">Gui</button>
+              </form>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ThreeDronePreview() {
+      const canvasRef = useRef(null);
+      const [modelInfo, setModelInfo] = useState("3D Drone Model");
+
+      useEffect(() => {
+        const THREE = window.THREE;
+        const GLTFLoader = window.THREE && window.THREE.GLTFLoader;
+        if (!THREE || !canvasRef.current) return undefined;
+
+        const canvas = canvasRef.current;
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x0f172a, 6, 12);
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        camera.position.set(0, 1.1, 4);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.15);
+        scene.add(hemiLight);
+        const keyLight = new THREE.DirectionalLight(0xfff5f5, 1.2);
+        keyLight.position.set(3, 4, 4);
+        scene.add(keyLight);
+
+        const drone = new THREE.Group();
+        scene.add(drone);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.2, roughness: 0.35 });
+        const redMat = new THREE.MeshStandardMaterial({ color: 0xE21D24, metalness: 0.1, roughness: 0.3 });
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x0F172A, metalness: 0.4, roughness: 0.2 });
+
+        const fallbackDrone = new THREE.Group();
+        const fuselage = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.28, 0.35), bodyMat);
+        fallbackDrone.add(fuselage);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.35, 16), redMat);
+        nose.rotation.z = -Math.PI / 2;
+        nose.position.set(0.86, 0, 0);
+        fallbackDrone.add(nose);
+        const railTop = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.08, 0.42), redMat);
+        railTop.position.set(-0.08, 0.19, 0);
+        fallbackDrone.add(railTop);
+        const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 1.5), darkMat);
+        leftArm.position.set(-0.3, 0.02, 0);
+        fallbackDrone.add(leftArm);
+        const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 1.5), darkMat);
+        rightArm.position.set(0.3, 0.02, 0);
+        fallbackDrone.add(rightArm);
+        const fallbackRotors = [];
+        [
+          [-0.3, 0.08, -0.72], [-0.3, 0.08, 0.72], [0.3, 0.08, -0.72], [0.3, 0.08, 0.72]
+        ].forEach(([x, y, z]) => {
+          const holder = new THREE.Group();
+          holder.position.set(x, y, z);
+          const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 16), bodyMat);
+          hub.rotation.x = Math.PI / 2;
+          holder.add(hub);
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.01, 0.05), new THREE.MeshStandardMaterial({ color: 0x94A3B8 }));
+          holder.add(blade);
+          fallbackDrone.add(holder);
+          fallbackRotors.push(holder);
+        });
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), new THREE.MeshStandardMaterial({ color: 0xff6b6b, emissive: 0x8f1015, emissiveIntensity: 1.1 }));
+        glow.position.set(0.55, 0.12, 0);
+        fallbackDrone.add(glow);
+        drone.add(fallbackDrone);
+        let usingFallback = true;
+        let modelRoot = null;
+        let mixer = null;
+
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(2.2, 0.02, 8, 48),
+          new THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.45 })
+        );
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = -0.55;
+        scene.add(ring);
+
+        const resize = () => {
+          const width = canvas.clientWidth || 320;
+          const height = canvas.clientHeight || 220;
+          renderer.setSize(width, height, false);
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+        };
+
+        resize();
+        const observer = new ResizeObserver(resize);
+        observer.observe(canvas);
+
+        if (GLTFLoader) {
+          const loader = new GLTFLoader();
+          loader.load(
+            DRONE_GLB_URL,
+            (gltf) => {
+              while (drone.children.length) drone.remove(drone.children[0]);
+              scene.add(ring);
+              modelRoot = gltf.scene;
+              modelRoot.scale.set(1.45, 1.45, 1.45);
+              modelRoot.position.set(0, -0.1, 0);
+              modelRoot.traverse((obj) => {
+                if (obj.isMesh) {
+                  obj.castShadow = true;
+                  obj.receiveShadow = true;
+                }
+              });
+              drone.add(modelRoot);
+              usingFallback = false;
+              setModelInfo("Flying drone_.glb loaded");
+
+              if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(modelRoot);
+                gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+              }
+            },
+            undefined,
+            () => {
+              usingFallback = true;
+              setModelInfo("Fallback drone (GLB load failed)");
+            }
+          );
+        } else {
+          setModelInfo("Fallback drone (GLTFLoader missing)");
+        }
+
+        const clock = new THREE.Clock();
+        let frameId = null;
+        const animate = () => {
+          const dt = clock.getDelta();
+          const t = clock.elapsedTime;
+          drone.rotation.y = t * 0.55;
+          drone.position.y = Math.sin(t * 1.2) * 0.05;
+          ring.rotation.z = t * 0.3;
+          if (mixer) mixer.update(dt);
+          if (usingFallback) {
+            fallbackRotors.forEach((rotor, idx) => {
+              rotor.rotation.y = t * (16 + idx * 2);
+            });
+          } else if (modelRoot) {
+            modelRoot.rotation.z = Math.sin(t * 2.2) * 0.02;
+          }
+          renderer.render(scene, camera);
+          frameId = requestAnimationFrame(animate);
+        };
+        animate();
+
+        return () => {
+          if (frameId) cancelAnimationFrame(frameId);
+          observer.disconnect();
+          renderer.dispose();
+          scene.clear();
+        };
+      }, []);
+
+      return (
+        <div className="glass rounded-2xl p-3 h-[230px]">
+          <div className="text-xs hud-font tracking-widest text-slate-300 uppercase mb-2">{modelInfo}</div>
+          <canvas ref={canvasRef} className="w-full h-[185px] rounded-xl bg-slate-950/60" />
+        </div>
+      );
+    }
+
+    function FleetStatusBoard({ bookings, onStatusChange }) {
+      const [tick, setTick] = useState(0);
+
+      useEffect(() => {
+        const timer = setInterval(() => setTick((n) => n + 1), 600);
+        return () => clearInterval(timer);
+      }, []);
+
+      const stats = useMemo(() => {
+        const total = bookings.length;
+        const inFlight = bookings.filter((b) => b.status === "IN_FLIGHT").length;
+        const delivered = bookings.filter((b) => b.status === "DELIVERED").length;
+        const queued = bookings.filter((b) => b.status === "QUEUED").length;
+        return { total, inFlight, delivered, queued };
+      }, [bookings]);
+
+      const liveCards = bookings.slice(0, 12).map((item, idx) => {
+        const wobble = Math.sin((tick + idx * 2) / 3);
+        const liveSpeed = item.status === "IN_FLIGHT" ? Math.max(45, Math.round(65 + wobble * 9)) : 0;
+        const liveAltitude = item.status === "IN_FLIGHT" ? Math.max(90, Math.round(140 + wobble * 22)) : 0;
+        const liveBattery = item.status === "IN_FLIGHT" ? Math.max(22, Math.round((item.battery || 80) - (tick % 8))) : (item.battery || 100);
+        const progress = item.status === "DELIVERED" ? 100 : item.status === "IN_FLIGHT" ? Math.min(98, Math.round(((item.progress || 0) * 100) + (tick % 5))) : 0;
+        return { ...item, liveSpeed, liveAltitude, liveBattery, progress };
+      });
+
+      return (
+        <motion.div
+          key="fleet-board"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <div className="glass rounded-2xl p-4 md:p-5 fleet-radar">
+            <div className="relative z-10">
+              <div className="text-xs uppercase tracking-[0.24em] hud-font text-cyan-200">Global Drone Network</div>
+              <h2 className="text-xl font-semibold mt-1">All Drone Orders Status</h2>
+              <div className="grid md:grid-cols-4 gap-3 mt-4">
+                <StatTile icon="Boxes" label="Total Orders" value={String(stats.total)} accent="#93C5FD" />
+                <StatTile icon="Plane" label="In Flight" value={String(stats.inFlight)} accent="#67E8F9" />
+                <StatTile icon="CheckCheck" label="Delivered" value={String(stats.delivered)} accent="#86EFAC" />
+                <StatTile icon="Clock3" label="Queued" value={String(stats.queued)} accent="#FDE68A" />
+              </div>
+            </div>
+          </div>
+
+          <ThreeDronePreview />
+
+          <div className="glass rounded-2xl p-4 md:p-5">
+            <div className="text-xs uppercase tracking-[0.2em] hud-font text-slate-300">Live Order Grid</div>
+            <div className="mt-3 grid md:grid-cols-2 gap-3">
+              {liveCards.length === 0 && <div className="text-sm text-slate-300">No drone orders yet.</div>}
+              {liveCards.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="rounded-xl border border-slate-700/70 bg-slate-900/55 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="hud-font text-sm">{item.id}</div>
+                    <div className={`text-xs font-semibold ${item.status === "DELIVERED" ? "text-emerald-300" : item.status === "IN_FLIGHT" ? "text-cyan-300" : item.status === "CANCELLED" ? "text-rose-300" : "text-amber-300"}`}>
+                      {item.status}
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-300 mt-1">{item.productCode} x {item.quantity} • {item.warehouseName}</div>
+                  <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                    <div className="rounded-lg bg-slate-800/80 p-2">
+                      <div className="text-slate-400">Speed</div>
+                      <div className="hud-font">{item.liveSpeed} km/h</div>
+                    </div>
+                    <div className="rounded-lg bg-slate-800/80 p-2">
+                      <div className="text-slate-400">Alt</div>
+                      <div className="hud-font">{item.liveAltitude} m</div>
+                    </div>
+                    <div className="rounded-lg bg-slate-800/80 p-2">
+                      <div className="text-slate-400">Battery</div>
+                      <div className="hud-font">{item.liveBattery}%</div>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                      <motion.div
+                        animate={{ width: `${item.progress}%` }}
+                        transition={{ duration: 0.5 }}
+                        className="h-full bg-gradient-to-r from-red-500 via-orange-400 to-cyan-300"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <select
+                      value={item.status}
+                      onChange={(e) => onStatusChange(item.id, e.target.value)}
+                      className="w-full px-2 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-xs hud-font"
+                    >
+                      {BOOKING_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function AuthPanel({ operators, setOperators, onLogin }) {
+      const [tab, setTab] = useState("login");
+      const [form, setForm] = useState({ name: "", email: "", password: "" });
+      const [message, setMessage] = useState("");
+
+      const submit = (event) => {
+        event.preventDefault();
+        const email = form.email.trim().toLowerCase();
+        const password = form.password.trim();
+        if (!email || !password) {
+          setMessage("Email and password are required.");
+          return;
+        }
+
+        if (tab === "register") {
+          if (!form.name.trim()) {
+            setMessage("Operator name is required.");
+            return;
+          }
+          const exists = operators.some((op) => op.email === email);
+          if (exists) {
+            setMessage("This operator email already exists.");
+            return;
+          }
+          const newOperator = {
+            id: `OP-${Date.now()}`,
+            name: form.name.trim(),
+            email,
+            password,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+          };
+          const nextOperators = [...operators, newOperator];
+          setOperators(nextOperators);
+          safeSave(STORAGE_KEYS.operators, nextOperators);
+          safeSave(STORAGE_KEYS.session, newOperator);
+          onLogin(newOperator);
+          return;
+        }
+
+        const found = operators.find((op) => op.email === email && op.password === password);
+        if (!found) {
+          setMessage("Invalid credentials.");
+          return;
+        }
+        const updated = { ...found, lastLogin: new Date().toISOString() };
+        const nextOperators = operators.map((op) => (op.id === updated.id ? updated : op));
+        setOperators(nextOperators);
+        safeSave(STORAGE_KEYS.operators, nextOperators);
+        safeSave(STORAGE_KEYS.session, updated);
+        onLogin(updated);
+      };
+
+      return (
+        <div className="min-h-screen w-full px-4 py-10 md:py-16">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-7 items-stretch">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="glass rounded-3xl p-6 md:p-8 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 grid-shell opacity-50 pointer-events-none" />
+              <div className="relative">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-500/50 bg-slate-900/40 text-xs uppercase tracking-widest hud-font">
+                  <Icon name="Radar" size={14} className="text-red-300" />
+                  Zipline-Grade Logistics
+                </div>
+                <h1 className="text-3xl md:text-4xl font-extrabold mt-4 leading-tight">
+                  SkyLink Delivery
+                  <span className="text-red-400"> v2.0</span>
+                </h1>
+                <p className="text-slate-200/90 mt-3 leading-relaxed">
+                  Tactical mission control for autonomous logistics with live map, smart pricing, and flight telemetry.
+                </p>
+                <div className="mt-8 space-y-3">
+                  <div className="flex items-center gap-3 text-slate-100">
+                    <Icon name="MapPinned" className="text-red-400" />
+                    Real-world Leaflet mission map
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-100">
+                    <Icon name="Calculator" className="text-red-400" />
+                    Haversine auto-pricing at 5,000 VND/km
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-100">
+                    <Icon name="Warehouse" className="text-red-400" />
+                    Multi-hub inventory aware dispatch
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.08 }}
+              className="glass rounded-3xl p-6 md:p-8"
+            >
+              <div className="flex rounded-xl overflow-hidden border border-slate-600/50">
+                <button
+                  onClick={() => setTab("login")}
+                  className={`flex-1 py-2 text-sm hud-font tracking-wider ${tab === "login" ? "bg-red-600 text-white" : "bg-slate-900/50 text-slate-300"}`}
+                >
+                  LOGIN
+                </button>
+                <button
+                  onClick={() => setTab("register")}
+                  className={`flex-1 py-2 text-sm hud-font tracking-wider ${tab === "register" ? "bg-red-600 text-white" : "bg-slate-900/50 text-slate-300"}`}
+                >
+                  REGISTER
+                </button>
+              </div>
+
+              <form className="mt-6 space-y-4" onSubmit={submit}>
+                {tab === "register" && (
+                  <div>
+                    <label className="text-sm text-slate-200">Operator Name</label>
+                    <input
+                      value={form.name}
+                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                      placeholder="Mission Operator"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm text-slate-200">Email</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                    placeholder="operator@skylink.vn"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-200">Password</label>
+                  <input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                    placeholder="********"
+                  />
+                </div>
+
+                {message && <div className="text-sm text-rose-300 bg-rose-950/40 border border-rose-500/40 rounded-lg px-3 py-2">{message}</div>}
+
+                <button type="submit" className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 transition font-semibold">
+                  {tab === "login" ? "Enter Mission Control" : "Create Operator Account"}
+                </button>
+              </form>
+
+              <p className="text-xs text-slate-400 mt-5 leading-relaxed">
+                Demo auth only. Credentials are stored in browser localStorage for operator simulation.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      );
+    }
+
+    function MissionMap({
+      destination,
+      onDestinationPick,
+      nearest,
+      inventory,
+      mission,
+      mapProvider
+    }) {
+      const mapContainerRef = useRef(null);
+      const mapRef = useRef(null);
+      const tileLayerRef = useRef(null);
+      const warehouseLayerRef = useRef(null);
+      const previewRouteRef = useRef(null);
+      const arcRouteRef = useRef(null);
+      const destinationRef = useRef(null);
+      const droneMarkerRef = useRef(null);
+
+      useEffect(() => {
+        if (!mapContainerRef.current || mapRef.current || !window.L) return undefined;
+
+        const L = window.L;
+        const map = L.map(mapContainerRef.current, {
+          zoomControl: false,
+          minZoom: 5,
+          maxZoom: 18
+        }).setView([15.9, 106.8], 6);
+
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+        const providerCfg = MAP_PROVIDERS[mapProvider] || MAP_PROVIDERS.osm;
+        tileLayerRef.current = L.tileLayer(providerCfg.url, providerCfg.options).addTo(map);
+
+        warehouseLayerRef.current = L.layerGroup().addTo(map);
+        previewRouteRef.current = L.polyline([], {
+          color: "#94A3B8",
+          weight: 2.2,
+          opacity: 0.85,
+          dashArray: "7 8"
+        }).addTo(map);
+        arcRouteRef.current = L.polyline([], {
+          color: "#E21D24",
+          weight: 4,
+          opacity: 0.95
+        }).addTo(map);
+        destinationRef.current = L.marker([0, 0], {
+          draggable: true,
+          icon: L.divIcon({
+            className: "",
+            html: '<div style="width:14px;height:14px;border-radius:999px;background:#E21D24;border:2px solid #fff;box-shadow:0 0 0 4px rgba(226,29,36,.25);"></div>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+          })
+        });
+        destinationRef.current.on("dragend", (evt) => {
+          const p = evt.target.getLatLng();
+          onDestinationPick({
+            lat: p.lat,
+            lng: p.lng,
+            label: `Adjusted destination at ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`
+          });
+        });
+        droneMarkerRef.current = L.marker([0, 0], {
+          icon: L.divIcon({
+            className: "",
+            html: '<div class="drone-pin"></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          }),
+          zIndexOffset: 999
+        });
+
+        map.on("click", (event) => {
+          onDestinationPick({
+            lat: event.latlng.lat,
+            lng: event.latlng.lng,
+            label: `Pinned on map at ${event.latlng.lat.toFixed(5)}, ${event.latlng.lng.toFixed(5)}`
+          });
+        });
+
+        mapRef.current = map;
+        return () => {
+          map.remove();
+          mapRef.current = null;
+        };
+      }, [onDestinationPick]);
+
+      useEffect(() => {
+        if (!mapRef.current || !window.L) return;
+        const L = window.L;
+        const providerCfg = MAP_PROVIDERS[mapProvider] || MAP_PROVIDERS.osm;
+        if (tileLayerRef.current) {
+          mapRef.current.removeLayer(tileLayerRef.current);
+        }
+        tileLayerRef.current = L.tileLayer(providerCfg.url, providerCfg.options).addTo(mapRef.current);
+      }, [mapProvider]);
+
+      useEffect(() => {
+        if (!mapRef.current || !warehouseLayerRef.current || !window.L) return;
+        const L = window.L;
+        warehouseLayerRef.current.clearLayers();
+        WAREHOUSES.forEach((wh) => {
+          const stock = inventory[wh.id] || {};
+          const totalStock = Object.values(stock).reduce((sum, qty) => sum + qty, 0);
+          const marker = L.circleMarker([wh.lat, wh.lng], {
+            radius: 6,
+            color: "#f8fafc",
+            weight: 1.1,
+            fillColor: "#0ea5e9",
+            fillOpacity: 0.92
+          });
+          marker.bindPopup(
+            `<div style="font-family:Inter,sans-serif;line-height:1.45;">
+              <div style="font-weight:700;">${wh.name}</div>
+              <div style="font-size:12px;opacity:0.9;">${wh.area}</div>
+              <div style="font-size:12px;margin-top:6px;">Stock Units: <b>${totalStock}</b></div>
+            </div>`
+          );
+          marker.addTo(warehouseLayerRef.current);
+        });
+      }, [inventory]);
+
+      useEffect(() => {
+        if (!mapRef.current || !destinationRef.current) return;
+        const map = mapRef.current;
+        if (!destination) {
+          if (map.hasLayer(destinationRef.current)) map.removeLayer(destinationRef.current);
+          return;
+        }
+
+        destinationRef.current.setLatLng([destination.lat, destination.lng]);
+        if (!map.hasLayer(destinationRef.current)) destinationRef.current.addTo(map);
+      }, [destination]);
+
+      useEffect(() => {
+        if (!mapRef.current || !previewRouteRef.current || !arcRouteRef.current || !droneMarkerRef.current) return;
+        const map = mapRef.current;
+
+        if (mission && mission.arcPath?.length) {
+          previewRouteRef.current.setLatLngs([]);
+          arcRouteRef.current.setLatLngs(mission.arcPath);
+          const position = mission.dronePosition || mission.arcPath[0];
+          droneMarkerRef.current.setLatLng(position);
+          if (!map.hasLayer(droneMarkerRef.current)) droneMarkerRef.current.addTo(map);
+        } else {
+          arcRouteRef.current.setLatLngs([]);
+          if (map.hasLayer(droneMarkerRef.current)) map.removeLayer(droneMarkerRef.current);
+          if (nearest && destination) {
+            previewRouteRef.current.setLatLngs([[nearest.warehouse.lat, nearest.warehouse.lng], [destination.lat, destination.lng]]);
+          } else {
+            previewRouteRef.current.setLatLngs([]);
+          }
+        }
+      }, [mission, nearest, destination]);
+
+      useEffect(() => {
+        if (!mapRef.current || !destination) return;
+        const map = mapRef.current;
+        const points = [[destination.lat, destination.lng]];
+        if (nearest) points.push([nearest.warehouse.lat, nearest.warehouse.lng]);
+        map.fitBounds(points, { padding: [56, 56], maxZoom: 12 });
+      }, [destination, nearest]);
+
+      return <div ref={mapContainerRef} className="h-[430px] md:h-[560px]" />;
+    }
+
+    function Dashboard({ operator, onLogout }) {
+      const [operators, setOperators] = useState(() => safeLoad(STORAGE_KEYS.operators, []));
+      const [inventory, setInventory] = useState(() => safeLoad(STORAGE_KEYS.inventory, DEFAULT_INVENTORY));
+      const [bookings, setBookings] = useState(() => safeLoad(STORAGE_KEYS.bookings, []));
+      const [destination, setDestination] = useState(null);
+      const [addressInput, setAddressInput] = useState("");
+      const [selectedProductCode, setSelectedProductCode] = useState(PRODUCTS[0].code);
+      const [selectedBookingStatus, setSelectedBookingStatus] = useState("QUEUED");
+      const [quantity, setQuantity] = useState(1);
+      const [panelMessage, setPanelMessage] = useState("");
+      const [isResolving, setIsResolving] = useState(false);
+      const [mode, setMode] = useState("booking");
+      const [mission, setMission] = useState(null);
+      const [mapProvider, setMapProvider] = useState("osm");
+
+      useEffect(() => {
+        safeSave(STORAGE_KEYS.operators, operators);
+      }, [operators]);
+
+      useEffect(() => {
+        safeSave(STORAGE_KEYS.inventory, inventory);
+      }, [inventory]);
+
+      useEffect(() => {
+        safeSave(STORAGE_KEYS.bookings, bookings);
+      }, [bookings]);
+
+      const nearest = useMemo(() => findNearestWarehouse(destination), [destination]);
+
+      const selectedProduct = useMemo(
+        () => PRODUCTS.find((item) => item.code === selectedProductCode) || PRODUCTS[0],
+        [selectedProductCode]
+      );
+
+      const stockAtNearest = useMemo(() => {
+        if (!nearest) return 0;
+        return inventory[nearest.warehouse.id]?.[selectedProduct.code] || 0;
+      }, [nearest, inventory, selectedProduct.code]);
+
+      const distanceKm = nearest?.distanceKm || 0;
+      const missionCost = Math.round(distanceKm * RATE_PER_KM);
+      const payloadWeight = selectedProduct.weightKg * quantity;
+
+      const resolveAddress = async () => {
+        const query = addressInput.trim();
+        if (!query) {
+          setPanelMessage("Enter an address or coordinates.");
+          return;
+        }
+
+        const parsed = parseLatLngText(query);
+        if (parsed) {
+          setDestination({
+            ...parsed,
+            label: `Manual coordinates ${parsed.lat.toFixed(5)}, ${parsed.lng.toFixed(5)}`
+          });
+          setPanelMessage("Coordinates accepted.");
+          return;
+        }
+
+        try {
+          setIsResolving(true);
+          const result = await geocodeAddress(query);
+          if (!result) {
+            setPanelMessage("Address not found. Try a more specific location.");
+            return;
+          }
+          setDestination({
+            lat: result.lat,
+            lng: result.lng,
+            label: result.label || query
+          });
+          setPanelMessage("Address resolved successfully.");
+        } catch (error) {
+          setPanelMessage("Address lookup failed. Use map click or lat,lng fallback.");
+        } finally {
+          setIsResolving(false);
+        }
+      };
+
+      const useMyLocation = () => {
+        if (!navigator.geolocation) {
+          setPanelMessage("Geolocation is not supported by this browser.");
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setDestination({ lat, lng, label: "Current location from GPS" });
+            setPanelMessage("Current location set successfully.");
+          },
+          () => setPanelMessage("Could not access current location."),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      };
+
+      const clearDestination = () => {
+        setDestination(null);
+        setPanelMessage("Destination cleared.");
+      };
+
+      const updateBookingStatus = (id, nextStatus) => {
+        if (!BOOKING_STATUSES.includes(nextStatus)) return;
+        setBookings((prev) => prev.map((it) => (it.id === id ? { ...it, status: nextStatus } : it)));
+        setMission((prev) => (prev && prev.id === id ? { ...prev, status: nextStatus } : prev));
+      };
+
+      const handleBook = () => {
+        if (!destination || !nearest) {
+          setPanelMessage("Set a valid destination first.");
+          return;
+        }
+        if (!Number.isFinite(quantity) || quantity < 1) {
+          setPanelMessage("Quantity must be at least 1.");
+          return;
+        }
+        if (stockAtNearest < quantity) {
+          setPanelMessage("Not enough inventory at nearest hub.");
+          return;
+        }
+
+        const missionId = `MS-${Date.now()}`;
+        const arcPath = buildArcPath(
+          { lat: nearest.warehouse.lat, lng: nearest.warehouse.lng },
+          { lat: destination.lat, lng: destination.lng }
+        );
+        const durationSec = Math.max(35, Math.min(190, Math.round(distanceKm * 3.2)));
+
+        const missionRecord = {
+          id: missionId,
+          operatorId: operator.id,
+          operatorName: operator.name,
+          warehouseId: nearest.warehouse.id,
+          warehouseName: nearest.warehouse.name,
+          warehouseArea: nearest.warehouse.area,
+          destination,
+          destinationLabel: destination.label || `${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}`,
+          productCode: selectedProduct.code,
+          productName: selectedProduct.name,
+          quantity,
+          payloadWeightKg: payloadWeight,
+          distanceKm,
+          totalPriceVnd: missionCost,
+          durationSec,
+          createdAt: new Date().toISOString(),
+          status: selectedBookingStatus,
+          progress: 0,
+          eta: durationSec,
+          speed: 0,
+          altitude: 120,
+          battery: 100,
+          arcPath,
+          dronePosition: arcPath[0]
+        };
+
+        setInventory((prev) => {
+          const next = { ...prev };
+          const current = next[nearest.warehouse.id]?.[selectedProduct.code] || 0;
+          next[nearest.warehouse.id] = {
+            ...(next[nearest.warehouse.id] || {}),
+            [selectedProduct.code]: Math.max(0, current - quantity)
+          };
+          return next;
+        });
+
+        setBookings((prev) => [missionRecord, ...prev]);
+        setMission(missionRecord);
+        if (selectedBookingStatus === "IN_FLIGHT") {
+          setMode("tactical");
+          setPanelMessage("Mission created. Entering tactical mode.");
+        } else {
+          setPanelMessage(`Mission created with status ${selectedBookingStatus}.`);
+        }
+      };
+
+      useEffect(() => {
+        if (!mission || mission.status !== "IN_FLIGHT") return undefined;
+        const startedAt = Date.now();
+        const tick = setInterval(() => {
+          setMission((prev) => {
+            if (!prev || prev.status !== "IN_FLIGHT") return prev;
+
+            const elapsedSec = (Date.now() - startedAt) / 1000;
+            const progress = Math.min(elapsedSec / prev.durationSec, 1);
+            const idx = Math.min(prev.arcPath.length - 1, Math.round(progress * (prev.arcPath.length - 1)));
+            const altitude = Math.round(110 + 120 * 4 * progress * (1 - progress));
+            const speed = Math.max(44, Math.round(64 + 11 * Math.sin(elapsedSec / 2.3)));
+            const eta = Math.max(0, Math.ceil(prev.durationSec - elapsedSec));
+            const battery = Math.max(21, Math.round(100 - progress * 77));
+            const status = progress >= 1 ? "DELIVERED" : "IN_FLIGHT";
+
+            const nextMission = {
+              ...prev,
+              progress,
+              altitude,
+              speed,
+              eta,
+              battery,
+              status,
+              dronePosition: prev.arcPath[idx]
+            };
+
+            if (status === "DELIVERED") {
+              setBookings((current) =>
+                current.map((item) =>
+                  item.id === prev.id
+                    ? {
+                        ...item,
+                        status: "DELIVERED",
+                        deliveredAt: new Date().toISOString(),
+                        progress: 1,
+                        eta: 0,
+                        battery
+                      }
+                    : item
+                )
+              );
+              setPanelMessage(`Mission ${prev.id} completed successfully.`);
+            }
+
+            return nextMission;
+          });
+        }, 240);
+
+        return () => clearInterval(tick);
+      }, [mission?.id, mission?.status]);
+
+      const latestFive = bookings.slice(0, 5);
+
+      return (
+        <div className="min-h-screen px-3 md:px-6 py-4 md:py-5">
+          <div className="max-w-[1500px] mx-auto">
+            <motion.header
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass rounded-2xl px-4 md:px-6 py-3 mb-4 md:mb-5 flex flex-wrap items-center gap-3 justify-between"
+            >
+              <div>
+                <div className="text-xs hud-font tracking-[0.26em] text-slate-300 uppercase">SkyLink Tactical Operations</div>
+                <div className="text-lg md:text-2xl font-bold mt-1">
+                  Welcome, {operator.name}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold ${mode === "booking" ? "bg-red-600 text-white" : "bg-slate-700 text-slate-100"}`}
+                  onClick={() => setMode("booking")}
+                >
+                  Booking
+                </button>
+                <button
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold ${mode === "tactical" ? "bg-red-600 text-white" : "bg-slate-700 text-slate-100"}`}
+                  onClick={() => setMode("tactical")}
+                >
+                  Tactical Mode
+                </button>
+                <button
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold ${mode === "fleet" ? "bg-red-600 text-white" : "bg-slate-700 text-slate-100"}`}
+                  onClick={() => setMode("fleet")}
+                >
+                  Drone Fleet
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-2 rounded-lg bg-slate-100 text-slate-900 text-sm font-semibold"
+                >
+                  Logout
+                </button>
+                <select
+                  value={mapProvider}
+                  onChange={(e) => setMapProvider(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-100 text-sm"
+                  title="Map API Provider"
+                >
+                  {Object.entries(MAP_PROVIDERS).map(([key, cfg]) => (
+                    <option key={key} value={key}>{cfg.label}</option>
+                  ))}
+                </select>
+              </div>
+            </motion.header>
+
+            <div className="grid xl:grid-cols-[1.35fr_1fr] gap-4 md:gap-5">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <div className="glass rounded-2xl p-3 md:p-4 map-frame">
+                  <div className="flex items-center justify-between mb-2 md:mb-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] hud-font text-slate-300">Leaflet Mission Map</div>
+                      <div className="font-semibold">Tap map to define destination waypoint</div>
+                    </div>
+                    <div className="hidden md:flex items-center text-sm text-slate-300 gap-2">
+                      <Icon name="MousePointerClick" size={16} className="text-red-300" />
+                      Live World Coordinates
+                    </div>
+                  </div>
+                  <MissionMap
+                    destination={destination}
+                    onDestinationPick={setDestination}
+                    nearest={nearest}
+                    inventory={inventory}
+                    mission={mission && mode === "tactical" ? mission : null}
+                    mapProvider={mapProvider}
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-4 gap-3">
+                  <StatTile icon="Route" label="Distance" value={`${distanceKm.toFixed(2)} km`} accent="#38BDF8" />
+                  <StatTile icon="Wallet" label="Estimated Cost" value={formatMoneyVnd(missionCost)} accent="#fca5a5" />
+                  <StatTile icon="Package" label="Payload" value={`${payloadWeight.toFixed(2)} kg`} accent="#67E8F9" />
+                  <StatTile icon="Warehouse" label="Nearest Hub" value={nearest ? nearest.warehouse.name : "N/A"} accent="#FDBA74" />
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                <AnimatePresence mode="wait">
+                  {mode === "booking" && (
+                    <motion.div
+                      key="booking-panel"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="glass rounded-2xl p-4 md:p-5"
+                    >
+                      <div className="text-xs uppercase tracking-[0.2em] hud-font text-slate-300">Smart Booking</div>
+                      <h2 className="text-xl font-semibold mt-1">Create Dispatch Mission</h2>
+
+                      <div className="mt-4 space-y-3">
+                        <div>
+                          <label className="text-sm text-slate-200">Destination Address</label>
+                          <div className="mt-1 flex gap-2">
+                            <input
+                              value={addressInput}
+                              onChange={(e) => setAddressInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  resolveAddress();
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                              placeholder="Enter address or lat,lng"
+                            />
+                            <button
+                              disabled={isResolving}
+                              onClick={resolveAddress}
+                              className="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 disabled:opacity-60 font-semibold text-slate-900"
+                            >
+                              {isResolving ? "..." : "Resolve"}
+                            </button>
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            <button onClick={useMyLocation} className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-semibold">
+                              Use My Location
+                            </button>
+                            <button onClick={clearDestination} className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">
+                              Clear Destination
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="rounded-lg bg-slate-900/55 border border-slate-700/60 p-2">
+                            <div className="text-slate-400 text-xs">Latitude</div>
+                            <div className="hud-font">{destination ? destination.lat.toFixed(6) : "-"}</div>
+                          </div>
+                          <div className="rounded-lg bg-slate-900/55 border border-slate-700/60 p-2">
+                            <div className="text-slate-400 text-xs">Longitude</div>
+                            <div className="hud-font">{destination ? destination.lng.toFixed(6) : "-"}</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-slate-200">Product</label>
+                          <select
+                            value={selectedProductCode}
+                            onChange={(e) => setSelectedProductCode(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                          >
+                            {PRODUCTS.map((product) => (
+                              <option key={product.code} value={product.code}>
+                                {product.code} - {product.name} ({product.weightKg}kg)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-sm text-slate-200">Quantity</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={quantity}
+                              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value || "1", 10)))}
+                              className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                            />
+                          </div>
+                          <div className="rounded-lg bg-slate-900/50 border border-slate-700/60 p-2 mt-6">
+                            <div className="text-xs text-slate-400">Available in nearest hub</div>
+                            <div className="hud-font text-lg">{stockAtNearest}</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-slate-200">Order Status</label>
+                          <select
+                            value={selectedBookingStatus}
+                            onChange={(e) => setSelectedBookingStatus(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950/70 border border-slate-600 text-white outline-none focus:border-red-400"
+                          >
+                            {BOOKING_STATUSES.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {nearest && (
+                          <div className="rounded-xl p-3 border border-slate-600/50 bg-slate-900/45">
+                            <div className="text-xs text-slate-300 uppercase tracking-widest hud-font">Auto-selected warehouse</div>
+                            <div className="font-semibold mt-1">{nearest.warehouse.name}</div>
+                            <div className="text-sm text-slate-300">{nearest.warehouse.area}</div>
+                          </div>
+                        )}
+
+                        {panelMessage && (
+                          <div className="text-sm rounded-lg px-3 py-2 border border-slate-500/60 bg-slate-900/40 text-slate-100">
+                            {panelMessage}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={handleBook}
+                          className="w-full mt-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 transition font-bold"
+                        >
+                          Book Mission
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {mode === "tactical" && (
+                    <motion.div
+                      key="tactical-panel"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="space-y-4"
+                    >
+                      <div className="glass rounded-2xl p-4 md:p-5">
+                        <div className="text-xs uppercase tracking-[0.2em] hud-font text-red-200">Mission Control HUD</div>
+                        <h2 className="text-xl font-semibold mt-1">Tactical Telemetry</h2>
+
+                        {!mission && (
+                          <div className="mt-4 text-sm text-slate-300">
+                            No active mission. Create a booking to launch tactical mode.
+                          </div>
+                        )}
+
+                        {mission && (
+                          <div className="mt-4 space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="rounded-lg p-2 border border-slate-700/70 bg-slate-900/55">
+                                <div className="text-xs text-slate-400 uppercase tracking-wider">Mission ID</div>
+                                <div className="hud-font text-sm mt-1">{mission.id}</div>
+                              </div>
+                              <div className="rounded-lg p-2 border border-slate-700/70 bg-slate-900/55">
+                                <div className="text-xs text-slate-400 uppercase tracking-wider">Status</div>
+                                <div className={`hud-font text-sm mt-1 ${mission.status === "DELIVERED" ? "text-emerald-300" : "text-amber-300"}`}>
+                                  {mission.status}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <StatTile icon="Mountain" label="Altitude" value={`${mission.altitude || 0} m`} accent="#fda4af" />
+                              <StatTile icon="Gauge" label="Ground Speed" value={`${mission.speed || 0} km/h`} accent="#7dd3fc" />
+                              <StatTile icon="Timer" label="ETA" value={`${mission.eta || 0} s`} accent="#fde68a" />
+                              <StatTile icon="BatteryCharging" label="Battery" value={`${mission.battery || 0}%`} accent="#86efac" />
+                            </div>
+
+                            <div className="rounded-xl p-3 border border-slate-600/60 bg-slate-900/55">
+                              <div className="flex justify-between text-xs text-slate-300 mb-1 hud-font">
+                                <span>Route Progress</span>
+                                <span>{Math.round((mission.progress || 0) * 100)}%</span>
+                              </div>
+                              <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-red-500 to-cyan-300 transition-all"
+                                  style={{ width: `${Math.round((mission.progress || 0) * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <ThreeDronePreview />
+                    </motion.div>
+                  )}
+
+                  {mode === "fleet" && (
+                    <FleetStatusBoard bookings={bookings} onStatusChange={updateBookingStatus} />
+                  )}
+                </AnimatePresence>
+
+                <div className="glass rounded-2xl p-4 md:p-5">
+                  <div className="text-xs uppercase tracking-[0.2em] hud-font text-slate-300">Warehouse Matrix</div>
+                  <div className="mt-3 space-y-2">
+                    {WAREHOUSES.map((hub) => (
+                      <div key={hub.id} className="rounded-lg border border-slate-700/70 bg-slate-900/50 p-3">
+                        <div className="font-semibold">{hub.name}</div>
+                        <div className="text-xs text-slate-400 mb-2">{hub.area}</div>
+                        <div className="grid grid-cols-3 gap-1 text-xs">
+                          {PRODUCTS.map((product) => (
+                            <div key={product.code} className="rounded bg-slate-800/80 px-2 py-1 hud-font">
+                              {product.code}: {inventory[hub.id]?.[product.code] ?? 0}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-4 md:p-5">
+                  <div className="text-xs uppercase tracking-[0.2em] hud-font text-slate-300">Recent Missions</div>
+                  <div className="mt-3 space-y-2">
+                    {latestFive.length === 0 && <div className="text-sm text-slate-400">No missions yet.</div>}
+                    {latestFive.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-slate-700/70 bg-slate-900/45 p-3 text-sm">
+                        <div className="flex justify-between gap-2">
+                          <div className="hud-font">{item.id}</div>
+                          <div className={item.status === "DELIVERED" ? "text-emerald-300" : "text-amber-300"}>{item.status}</div>
+                        </div>
+                        <div className="text-slate-300 mt-1">
+                          {item.productCode} x {item.quantity} from {item.warehouseName}
+                        </div>
+                        <div className="text-slate-400 text-xs mt-1">
+                          {item.distanceKm.toFixed(2)} km - {formatMoneyVnd(item.totalPriceVnd)}
+                        </div>
+                        <div className="mt-2">
+                          <select
+                            value={item.status}
+                            onChange={(e) => updateBookingStatus(item.id, e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-xs hud-font"
+                          >
+                            {BOOKING_STATUSES.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [operators, setOperators] = useState(() => safeLoad(STORAGE_KEYS.operators, []));
+      const [session, setSession] = useState(() => safeLoad(STORAGE_KEYS.session, null));
+
+      const logout = () => {
+        safeSave(STORAGE_KEYS.session, null);
+        setSession(null);
+      };
+
+      if (!window.Motion || !window.L || !window.THREE || !window.LucideReact) {
+        return (
+          <div className="min-h-screen grid place-items-center px-4">
+            <div className="glass rounded-2xl p-5 max-w-xl text-center">
+              <h2 className="text-2xl font-bold">Library Loading Error</h2>
+              <p className="text-slate-300 mt-2">
+                One or more CDN scripts failed to load. Check your network and refresh.
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!session) {
+        return (
+          <AuthPanel
+            operators={operators}
+            setOperators={setOperators}
+            onLogin={setSession}
+          />
+        );
+      }
+
+      return <Dashboard operator={session} onLogout={logout} />;
+    }
+
+    function RootApp() {
+      return (
+        <>
+          <App />
+          <FloatingSupport />
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<RootApp />);
+  </script>
+</body>
+</html>
