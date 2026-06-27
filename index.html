@@ -291,11 +291,11 @@
         </section>
 
         <!-- SECTION 3: DRONE VTOL STRUCTURE -->
-        <section id="sec-vtol" class="tab-content space-y-6 hidden">
+         <section id="sec-vtol" class="tab-content space-y-6 hidden">
             <div class="border-l-4 border-purple-500 pl-4 mb-4">
-                <span class="text-xs font-bold text-purple-500 tracking-widest">Cấu trúc drone kỹ thuật cao</span>
-                <h2 class="text-3xl font-extrabold text-white">Mô hình drone vtol nền tảng drone volt heliplane</h2>
-                <p class="text-slate-400 text-sm mt-1">Giải pháp bay cất hạ cánh thẳng đứng kết hợp cánh bằng (fixed-wing) tối ưu hành trình xa.</p>
+                <span class="text-xs font-bold text-purple-500 uppercase tracking-widest">Cấu trúc Drone Kỹ thuật cao</span>
+                <h2 class="text-3xl font-extrabold text-white">Mô hình Drone VTOL Nền tảng Drone Volt Heliplane</h2>
+                <p class="text-slate-400 text-sm mt-1">Giải pháp bay cất hạ cánh thẳng đứng kết hợp cánh bằng (Fixed-wing) tối ưu hành trình xa</p>
             </div>
 
             <!-- Drone Simulation Interface & Spec Dashboard -->
@@ -307,9 +307,9 @@
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full bg-purple-500 animate-ping"></span>
-                                <h3 class="text-lg font-bold text-white">Bản dựng 3d / render kỹ thuật drone volt</h3>
+                                <h3 class="text-lg font-bold text-white">Bản dựng 3D / Render Kỹ thuật Drone Volt</h3>
                             </div>
-                            <span class="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-1 rounded-full border border-purple-500/20">Mô hình tích hợp thực tế</span>
+                            <span class="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-1 rounded-full font-mono border border-purple-500/20">Mô hình tích hợp thực tế</span>
                         </div>
 
                         <!-- Telemetry Overlay Status Board -->
@@ -326,30 +326,25 @@
                             </div>
                         </div>
 
-                        <!-- Interactive SVG Drone Design (replaces local image paths which could fail) -->
-                        <div class="bg-slate-950 border border-slate-850 rounded-2xl p-6 mb-6 flex flex-col items-center justify-center relative z-10">
-                            <span class="text-[10px] text-purple-400 mb-4 tracking-wider font-semibold uppercase">Sơ đồ thiết kế khí động học heliplane</span>
-                            <div class="w-full max-w-md h-56 flex items-center justify-center">
-                                <svg viewBox="0 0 200 120" class="w-full h-full text-purple-500">
-                                    <!-- Main Wings -->
-                                    <path d="M 10 60 L 190 60 L 170 52 L 30 52 Z" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="2"/>
-                                    <!-- Fuselage -->
-                                    <rect x="85" y="20" width="30" height="80" rx="15" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
-                                    <!-- VTOL Booms -->
-                                    <line x1="50" y1="30" x2="50" y2="90" stroke="#8b5cf6" stroke-width="2.5" />
-                                    <line x1="150" y1="30" x2="150" y2="90" stroke="#8b5cf6" stroke-width="2.5" />
-                                    <!-- VTOL Propellers -->
-                                    <ellipse cx="50" cy="30" rx="12" ry="2" fill="none" stroke="#a78bfa" stroke-width="1" />
-                                    <ellipse cx="50" cy="90" rx="12" ry="2" fill="none" stroke="#a78bfa" stroke-width="1" />
-                                    <ellipse cx="150" cy="30" rx="12" ry="2" fill="none" stroke="#a78bfa" stroke-width="1" />
-                                    <ellipse cx="150" cy="90" rx="12" ry="2" fill="none" stroke="#a78bfa" stroke-width="1" />
-                                    <!-- Pusher Propeller at the tail -->
-                                    <line x1="90" y1="102" x2="110" y2="102" stroke="#ef4444" stroke-width="3"/>
-                                    <!-- Tail wings -->
-                                    <path d="M 80 100 L 120 100 L 110 110 L 90 110 Z" fill="#1e1b4b" stroke="#3b82f6" stroke-width="1.5"/>
-                                </svg>
+                        <!-- Integrated 3D Render Models Dual Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10 mb-6">
+                            <!-- Perspective Isometric View -->
+                            <div class="bg-slate-950 border border-slate-850 rounded-2xl p-4 flex flex-col items-center group hover:border-purple-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/10">
+                                <span class="text-[10px] text-purple-400 font-mono mb-2 uppercase tracking-wider font-semibold">Phối cảnh Trục đo (Isometric View)</span>
+                                <div class="h-44 w-full flex items-center justify-center overflow-hidden rounded-xl bg-slate-900/40 p-2 border border-slate-800/50">
+                                    <img src="heliplane_v4-01-1024x724.png" alt="Heliplane Isometric" class="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105 group-hover:rotate-1">
+                                </div>
+                                <span class="text-[10px] text-slate-500 mt-2 font-mono">heliplane_v4-01-1024x724.png</span>
                             </div>
-                            <span class="text-[10px] text-slate-500 mt-2">Phác họa vector khung sợi carbon sải cánh 2.2m</span>
+
+                            <!-- Structural Side View -->
+                            <div class="bg-slate-950 border border-slate-850 rounded-2xl p-4 flex flex-col items-center group hover:border-purple-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/10">
+                                <span class="text-[10px] text-purple-400 font-mono mb-2 uppercase tracking-wider font-semibold">Góc nhìn Ngang cạnh bên (Side View)</span>
+                                <div class="h-44 w-full flex items-center justify-center overflow-hidden rounded-xl bg-slate-900/40 p-2 border border-slate-800/50">
+                                    <img src="heliplane-dronevolt-vue-côté-500x300.png" alt="Heliplane Side View" class="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-1">
+                                </div>
+                                <span class="text-[10px] text-slate-500 mt-2 font-mono">heliplane-dronevolt-vue-côté-500x300.png</span>
+                            </div>
                         </div>
                     </div>
 
@@ -357,25 +352,25 @@
                     <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-4 z-10 relative">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-xs text-slate-400 block mb-1">Thiết lập vận tốc gió ngược (m/s)</label>
+                                <label class="text-xs text-slate-400 block mb-1">Thiết lập Vận tốc Gió Ngược (m/s)</label>
                                 <input type="range" id="input-wind" min="0" max="25" value="10" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500" oninput="updateVTOLSim()">
                             </div>
                             <div>
-                                <label class="text-xs text-slate-400 block mb-1">Khối lượng gói hàng y tế (kg)</label>
+                                <label class="text-xs text-slate-400 block mb-1">Khối lượng Gói hàng Y tế (kg)</label>
                                 <input type="range" id="input-payload" min="0.5" max="4" step="0.1" value="2.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500" oninput="updateVTOLSim()">
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-900">
                             <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-850">
-                                <span class="text-[9px] text-slate-500 block">Thời gian bay tối đa</span>
+                                <span class="text-[9px] text-slate-500 uppercase block">Thời gian bay tối đa</span>
                                 <span id="sim-flight-time" class="text-sm font-bold text-white">45 phút</span>
                             </div>
                             <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-850">
-                                <span class="text-[9px] text-slate-500 block">Quãng đường hành trình</span>
+                                <span class="text-[9px] text-slate-500 uppercase block">Quãng đường hành trình</span>
                                 <span id="sim-range" class="text-sm font-bold text-emerald-400">65 km</span>
                             </div>
                             <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-850">
-                                <span class="text-[9px] text-slate-500 block">Mức độ kháng gió</span>
+                                <span class="text-[9px] text-slate-500 uppercase block">Mức độ kháng gió</span>
                                 <span id="sim-wind-res" class="text-sm font-bold text-purple-400">Cấp 6</span>
                             </div>
                         </div>
@@ -387,19 +382,19 @@
                     <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
                             <i data-lucide="cpu" class="w-5 h-5 text-purple-500"></i>
-                            Đặc tính cơ kỹ thuật tối ưu drone volt
+                            Đặc tính Cơ kỹ thuật tối ưu Drone Volt
                         </h3>
                         <div class="space-y-4 text-sm text-slate-300">
                             <div class="p-3 bg-slate-950 rounded-xl border border-slate-850">
-                                <span class="text-xs font-bold text-purple-400 block mb-1">Cấu hình động cơ hybrid vtol:</span>
+                                <span class="text-xs font-bold text-purple-400 block mb-1">Cấu hình Động cơ Hybrid VTOL:</span>
                                 <p class="text-xs">Tận dụng chuỗi chuyển trạng thái thông minh với 4 động cơ nâng thẳng đứng hỗ trợ cất hạ cánh trong không gian hẹp và 1 động cơ đẩy (pusher motor) phía đuôi bứt tốc hành trình cánh bằng.</p>
                             </div>
                             <div class="p-3 bg-slate-950 rounded-xl border border-slate-850">
-                                <span class="text-xs font-bold text-purple-400 block mb-1">Khung vỏ sợi thủy tinh &amp; carbon:</span>
+                                <span class="text-xs font-bold text-purple-400 block mb-1">Khung vỏ Sợi thủy tinh &amp; Carbon:</span>
                                 <p class="text-xs">Vỏ khung chế tác từ composite siêu nhẹ chịu bền áp lực gió cao, triệt tiêu đáng kể rung động cơ học tần số cao giúp bảo vệ cấu trúc sinh phẩm tế bào bên trong hộp hàng.</p>
                             </div>
                             <div class="p-3 bg-slate-950 rounded-xl border border-slate-850">
-                                <span class="text-xs font-bold text-purple-400 block mb-1">Cơ cấu mô-đun cánh tháo rời:</span>
+                                <span class="text-xs font-bold text-purple-400 block mb-1">Cơ cấu Mô-đun Cánh tháo rời:</span>
                                 <p class="text-xs">Hệ thống cánh và đuôi khí động học có khả năng tháo lắp linh hoạt cực nhanh mà không cần công cụ, tối ưu hóa kích thước vận chuyển trong các thùng chứa chuyên dụng.</p>
                             </div>
                         </div>
